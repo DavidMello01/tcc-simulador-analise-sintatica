@@ -80,7 +80,7 @@ def get_goto_action_tables(grammar, analysis_type):
         key: parsing_table[key]
         for key in parsing_table.keys() & term_nterm["nonterminals"]
     }
-
+    validate_grammar_coverage(grammar, tables["action_table"], tables["goto_table"])
     goto = replace_functions(goto)
 
     return {
@@ -112,6 +112,17 @@ def replace_functions(dictionary):
                     value, f"EMPILHAR[ {value[1:]} ]"
                 )
     return dictionary
+
+def validate_grammar_coverage(grammar, action_table, goto_table):
+    term_nterm = sep_terminals_nonterminals(grammar)
+    missing_tokens = [
+        t for t in term_nterm["terminals"] 
+        if t not in action_table
+    ]
+    if missing_tokens:
+        raise ValueError(
+            f"Tokens da gramática faltando na tabela de ações: {missing_tokens}"
+        )
 
 
 # open_site('https://www.selenium.dev/documentation/webdriver/getting_started/install_drivers/')

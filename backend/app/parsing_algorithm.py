@@ -7,6 +7,13 @@ def bottom_up_algorithm(action_table, goto_table, input):
     input_tape = input.split(" ")
     input_tape.append("$")
 
+    
+    if "(" in input_tape and ")" not in input_tape:
+        return {
+            "Erro": "ERRO SINTÁTICO: Parêntese não fechado. Esperava ')'",
+            "Contexto": f"Encontrado: {input_tape}"
+        }
+
     # Detalhamento do passo a passo
     detailed_steps = [
         {
@@ -198,8 +205,22 @@ def bottom_up_algorithm(action_table, goto_table, input):
             break
         elif action_movement[0] == "ERRO!":
             print("parse alg 7")
-            step_by_step.append(f"A entrada não está correta.")
-            step_by_step_detailed.append([f"A entrada tem um erro sintático"])
+           elif action_movement[0] == "ERRO!":
+            # Erro detahado
+            expected_tokens = [
+                token for token in action_table.keys() 
+                if action_table[token][action[0]] != "ERRO!"
+            ]
+            expected_str = ", ".join(f"'{t}'" for t in expected_tokens)
+            
+            step_by_step.append(f"ERRO SINTÁTICO: Token inesperado '{input_tape[pointer]}'")
+            step_by_step_detailed.append([
+                f"ERRO na posição {pointer}:",
+                f"Encontrado: '{input_tape[pointer]}'",
+                f"Esperava um dos: {expected_str}",
+                f"Contexto: Pilha: {stack}, Fita: {input_tape[pointer:]}"  # Adiciona contexto
+            ])
+            break
             detailed_steps.append(
                 {
                     "stepByStep": step_by_step.copy(),
