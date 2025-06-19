@@ -1,6 +1,92 @@
 # Importacoes
 import pandas as pd
 
+from IPython.display import HTML
+import pandas as pd
+
+def color_error_suggestions(action_table):
+    # Create a styled DataFrame for display
+    df = pd.DataFrame(action_table).T
+    styled_df = df.style
+    
+    # Apply color to error cells with suggestions
+    def highlight_errors(val):
+        if isinstance(val, str):
+            if "ERRO!" in val:
+                return 'background-color: #FFCDD2; color: #B71C1C'  # Light red background, dark red text
+            elif "Sugestão:" in val:
+                return 'background-color: #C8E6C9; color: #1B5E20'  # Light green background, dark green text
+        return ''
+    
+    return styled_df.applymap(highlight_errors)
+
+def enhance_action_table_with_suggestions(action_table):
+    enhanced_table = {}
+    for token in action_table:
+        enhanced_table[token] = {}
+        for state in action_table[token]:
+            if action_table[token][state] == "ERRO!":
+                # Add specific suggestions based on state and token
+                if token == ";" and state == 0:
+                    enhanced_table[token][state] = "ERRO! Sugestão: Remova ';' ou insira 'a'/'(' antes"
+                elif token == "$" and state == 0:
+                    enhanced_table[token][state] = "ERRO! Sugestão: Insira 'a' ou '('"
+                elif token == ")" and state in [0, 1, 2, 5, 7, 8]:
+                    enhanced_table[token][state] = "ERRO! Sugestão: Remova ')' ou insira '(' antes"
+                elif token == "a" and state in [2, 5, 8]:
+                    enhanced_table[token][state] = "ERRO! Sugestão: Insira ';' entre os 'a's"
+                else:
+                    expected = []
+                    for t in action_table:
+                        if action_table[t].get(state, "") != "ERRO!":
+                            expected.append(t)
+                    enhanced_table[token][state] = f"ERRO! Esperava: {', '.join(expected)}"
+            else:
+                enhanced_table[token][state] = action_table[token][state]
+    return enhanced_table
+
+def bottom_up_algorithm(action_table, goto_table, input):
+    # Enhance the action table with suggestions
+    enhanced_action_table = enhance_action_table_with_suggestions(action_table)
+    
+    # Display the colored table
+    display(color_error_suggestions(enhanced_action_table))
+    
+    # Rest of your existing implementation...
+    stack = ["0"]
+    pointer = 0
+    aux_cont = 0
+    input_tape = input.split(" ")
+    input_tape.append("$")
+
+    # [Rest of your existing bottom_up_algorithm function...]
+    
+    # When handling errors, use the enhanced table:
+    def handle_error(input_tape, pointer, stack, action_table):
+        current_state = int(stack[-1])
+        current_token = input_tape[pointer]
+        
+        # Get the enhanced error message from our table
+        if current_token in enhanced_action_table and current_state in enhanced_action_table[current_token]:
+            error_msg = enhanced_action_table[current_token][current_state]
+            if "Sugestão:" in error_msg:
+                return {
+                    "Erro": error_msg.split("Sugestão:")[0].strip(),
+                    "Sugestão": error_msg.split("Sugestão:")[1].strip()
+                }
+        
+        # Fallback to original error handling
+        expected_tokens = [
+            token for token in action_table.keys()
+            if action_table[token].get(current_state, "ERRO!") != "ERRO!"
+        ]
+        
+        return {
+            "Erro": f"Token '{current_token}' inesperado no estado {current_state}",
+            "Sugestão": f"Esperava um dos: {', '.join(expected_tokens)}"
+        }
+
+    # [Continue with the rest of your function...]
 
 # Obtem a tabela de analise do site: https://smlweb.cpsc.ucalgary.ca/
 def get_parsing_table(grammar, analysis_type):

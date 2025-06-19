@@ -4,15 +4,74 @@ def bottom_up_algorithm(action_table, goto_table, input):
 
     aux_cont = 0
 
+
+    unclosed_parens = 0  # Contador de parênteses abertos
     input_tape = input.split(" ")
     input_tape.append("$")
 
-    
-    if "(" in input_tape and ")" not in input_tape:
-        return {
-            "Erro": "ERRO SINTÁTICO: Parêntese não fechado. Esperava ')'",
-            "Contexto": f"Encontrado: {input_tape}"
-        }
+    def handle_error(input_tape, pointer, stack, action_table):
+        nonlocal unclosed_parens
+        current_token = input_tape[pointer]
+        current_state = int(stack[-1])
+        expected_tokens = [
+            token for token in action_table.keys()
+            if action_table[token].get(current_state, "ERRO!") != "ERRO!"
+        ]
+
+        # Verifica parênteses não fechados quando chega no final
+        if unclosed_parens > 0 and current_token == "$":
+            return {
+                "Erro": "ERRO SINTÁTICO: Parêntese não fechado",
+                "Sugestão": f"Faltam {unclosed_parens} ')' para fechar os parênteses",
+                "Contexto": f"Encontrado: {input_tape[:pointer]}"
+            }
+        
+        # Caso específico para "a(" sem fechamento
+        if current_token == "$" and "(" in input_tape and ")" not in input_tape:
+            return {
+                "Erro": "ERRO SINTÁTICO: Parêntese não fechado após 'a'",
+                "Sugestão": "Adicione ')' após o conteúdo dentro dos parênteses",
+                "Contexto": f"Encontrado: {input_tape[:pointer]}"
+            }
+        
+        # Restante dos casos específicos originais
+        if current_token == ";" and len(stack) == 1:
+            return {
+                "Erro": "Token ';' inesperado no início. Esperava 'a' ou '('",
+                "Sugestão": "Remova ';' ou insira 'a'/'(' antes"
+            }
+        elif current_token == "$" and pointer == 0:
+            return {
+                "Erro": "Entrada vazia. A gramática exige pelo menos 'a' ou '('",
+                "Sugestão": "Insira 'a' ou '('"
+            }
+        elif current_token == ")" and unclosed_parens <= 0:
+            return {
+                "Erro": "Token ')' inesperado. Não há '(' aberto",
+                "Sugestão": "Remova ')' ou insira '(' antes"
+            }
+        elif current_token == ")" and input_tape[pointer-1] == "(":
+            return {
+                "Erro": "Parênteses vazios. Esperava 'a' ou '(' dentro",
+                "Sugestão": "Insira 'a' ou '(' entre os parênteses"
+            }
+        elif current_token == "a" and pointer > 0 and input_tape[pointer-1] == "a":
+            return {
+                "Erro": "Dois termos 'a' consecutivos. Esperava ';' entre eles",
+                "Sugestão": "Insira ';' entre os 'a's: '(a;a)'"
+            }
+        else:
+            return {
+                "Erro": f"Token '{current_token}' inesperado no estado {current_state}",
+                "Sugestão": f"Esperava um dos: {', '.join(expected_tokens)}",
+                "Contexto": f"Pilha: {stack}, Fita restante: {input_tape[pointer:]}"
+            }
+            
+            if "(" in input_tape and ")" not in input_tape:
+                return {
+                    "Erro": "ERRO SINTÁTICO: Parêntese não fechado. Esperava ')'",
+                    "Contexto": f"Encontrado: {input_tape}"
+                }
 
     # Detalhamento do passo a passo
     detailed_steps = [
@@ -29,6 +88,12 @@ def bottom_up_algorithm(action_table, goto_table, input):
     run = True
     while run == True:
         aux_cont += 1
+
+        # Dentro do loop while, antes de verificar o token
+        if input_tape[pointer] == "(":
+            unclosed_parens += 1
+        elif input_tape[pointer] == ")":
+            unclosed_parens -= 1
 
         if aux_cont > 1000:
             break
@@ -204,33 +269,16 @@ def bottom_up_algorithm(action_table, goto_table, input):
             )
             break
         elif action_movement[0] == "ERRO!":
-            print("parse alg 7")
-        elif action_movement[0] == "ERRO!":
-            # Erro detahado
-            expected_tokens = [
-                token for token in action_table.keys() 
-                if action_table[token][action[0]] != "ERRO!"
-            ]
-            expected_str = ", ".join(f"'{t}'" for t in expected_tokens)
-            
-            step_by_step.append(f"ERRO SINTÁTICO: Token inesperado '{input_tape[pointer]}'")
-            step_by_step_detailed.append([
-                f"ERRO na posição {pointer}:",
-                f"Encontrado: '{input_tape[pointer]}'",
-                f"Esperava um dos: {expected_str}",
-                f"Contexto: Pilha: {stack}, Fita: {input_tape[pointer:]}"  # Adiciona contexto
-            ])
-            break
-            detailed_steps.append(
-                {
-                    "stepByStep": step_by_step.copy(),
-                    "stepByStepDetailed": step_by_step_detailed.copy(),
-                    "stack": stack[::-1].copy(),
-                    "input": input_tape.copy(),
-                    "pointer": pointer,
-                    "stepMarker": ["", ""],
-                }
-            )
+            error_info = handle_error(input_tape, pointer, stack, action_table)
+            detailed_steps.append({
+                "stepByStep": [f"ERRO: {error_info['Erro']}"],
+                "stepByStepDetailed": [[error_info["Sugestão"]]],
+                "stack": stack[::-1].copy(),
+                "input": input_tape.copy(),
+                "pointer": pointer,
+                "stepMarker": ["", ""]
+            })
+            print(detailed_steps)
             break
         else:
             print("parse alg 7")
