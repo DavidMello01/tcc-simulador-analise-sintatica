@@ -22,6 +22,7 @@ const BottomUpAnalisys = () => {
   const [parsingTable, setParsingTable] = useState({});
   const [steps, setSteps] = useState([]);
   const [grammar, setGrammar] = useState([]);
+  const [errors, setErrors] = useState([]);
 
   const stepsTutorial = [
     {
@@ -68,6 +69,71 @@ const BottomUpAnalisys = () => {
     },
   ];
 
+  const handleAcceptSuggestion = (errorIndex, sugestao) => {
+    let originalTape = location.state["inputTape"].split(" ");
+    
+    let correctedTape = [...originalTape];
+    console.log("correctedTape:",correctedTape);
+
+    if (sugestao.includes("Remova")) {
+      correctedTape.splice(errorIndex, 1);
+
+      if (sugestao.includes("adicione")) {
+        const match = sugestao.match(/\[([^\]]+)\]/);
+        if (match && match[1]) {
+          const tokens = match[1]
+            .split(' ')
+            .filter(token => token && (token !== "$" && token !== "S" && token != correctedTape[errorIndex]));
+          if (tokens.length > 0) {
+            const randomToken = tokens[Math.floor(Math.random() * tokens.length)];
+            correctedTape.splice(errorIndex, 0, randomToken);
+          }
+        }
+      }
+    } else if (sugestao.includes("Insira")) {
+      const regex = /['"](.*?)['"]/;
+      const match = sugestao.match(regex);
+      if (match) {
+        const tokenParaInserir = match[1];
+        correctedTape.splice(errorIndex, 0, tokenParaInserir);
+      }
+    } else if (sugestao.includes("Substitua")) {
+      const regex = /['"](.*?)['"]/;
+      const match = sugestao.match(regex);
+      if (match) {
+        const tokenParaSubstituir = match[1];
+        correctedTape[errorIndex] = tokenParaSubstituir; // Substitui o token com erro
+      }
+    } else if (sugestao.includes("Feche")) {
+      correctedTape.splice(errorIndex, 0, ")");  // Insere o ")" exatamente no índice
+    }
+
+    const newInputTape = correctedTape.join(" ");
+
+    // Agora reenvia a requisição com a nova fita corrigida
+    getAllData(location.state["grammar"], newInputTape, location.state["parsingType"])
+      .then((response) => {
+        if (response.data["ERROR_CODE"] == 0) {
+          setLoading(false);
+          setGrammar(response.data["grammar"]);
+          setSteps(response.data["stepsParsing"].steps);
+          setErrors(response.data["stepsParsing"].errors);
+          setParsingTable(response.data["parsingTable"]);
+
+          // Atualiza o inputTape no estado
+          location.state["inputTape"] = newInputTape;
+        } else {
+          navigate("/error", {
+            state: {
+              message: response.data["errorMessage"],
+            },
+          });
+        }
+      })
+      .catch((error) => console.error(error));
+  };
+
+
   useEffect(() => {
     console.log(
       "Gramatica: " +
@@ -77,17 +143,20 @@ const BottomUpAnalisys = () => {
         "==Fita: " +
         location.state["inputTape"]
     );
+    console.log("inputTape", location.state['inputTape'])
     getAllData(
       location.state["grammar"],
       location.state["inputTape"],
       location.state["parsingType"]
     )
       .then((response) => {
+        console.log(response);
         if (response.data["ERROR_CODE"] == 0) {
           console.log(response.data);
           setLoading(false);
           setGrammar(response.data["grammar"]);
-          setSteps(response.data["stepsParsing"]);
+          setSteps(response.data["stepsParsing"].steps);
+          setErrors(response.data["stepsParsing"].errors);
           setParsingTable(response.data["parsingTable"]);
         } else {
           navigate("/error", {
@@ -130,6 +199,23 @@ const BottomUpAnalisys = () => {
                   stepByStepDetailed={steps[stepCont]["stepByStepDetailed"]}
                   qtSteps={steps.length - 1}
                 />
+
+                {errors.map((error, index) => (
+
+                    <div key={index}>
+                      <p>Erro: {error.erro}</p>
+                      <p>Elemento da fita: {error.index + 1}</p>
+                      <p>Estado: {error.estado}</p>
+                      <p>Sugestão: {error.sugestao}</p>
+                      <button style={{width: '100%'}} onClick={() => handleAcceptSuggestion(error.index, error.sugestao)}>
+                        Aceitar sugestão
+                      </button>
+                    </div>
+                    
+
+                ))}
+
+                
               </div>
               <div className="col-md-3">
                 <Stack stack={steps[stepCont]["stack"]} />
