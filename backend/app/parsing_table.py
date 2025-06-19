@@ -35,7 +35,7 @@ def get_parsing_dict(parsing_table):
     return parsing_table.to_dict()
 
 
-# Separar terminais e nao-terminais
+# Separar terminais e nao-terminais -- AGORA FUNCIONA MESMO COM ESPAÇOS, ANTES O SPLIT
 def sep_terminals_nonterminals(grammar):
     terminals = []
     nonterminals = []
@@ -45,12 +45,13 @@ def sep_terminals_nonterminals(grammar):
 
     for line in grammar_array:
         aux = line.split("->")
-        nonterminals.append(aux[0])
+        nonterminals.append(aux[0].strip())  # Remove espaços extras
         aux1 = aux[1].split("|")
         for i in aux1:
-            aux2 = i.split(" ")
+            aux2 = i.strip().split(" ")  # Remove espaços antes do split
             for j in aux2:
-                terminals.append(j)
+                if j:  # Ignora strings vazias
+                    terminals.append(j)
 
     for i in nonterminals:
         for j in terminals:
@@ -80,7 +81,7 @@ def get_goto_action_tables(grammar, analysis_type):
         key: parsing_table[key]
         for key in parsing_table.keys() & term_nterm["nonterminals"]
     }
-    validate_grammar_coverage(grammar, tables["action_table"], tables["goto_table"])
+    validate_grammar_coverage(grammar, action, goto)
     goto = replace_functions(goto)
 
     return {

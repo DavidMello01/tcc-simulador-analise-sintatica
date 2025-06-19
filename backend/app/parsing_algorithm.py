@@ -205,7 +205,7 @@ def bottom_up_algorithm(action_table, goto_table, input):
             break
         elif action_movement[0] == "ERRO!":
             print("parse alg 7")
-           elif action_movement[0] == "ERRO!":
+        elif action_movement[0] == "ERRO!":
             # Erro detahado
             expected_tokens = [
                 token for token in action_table.keys() 
