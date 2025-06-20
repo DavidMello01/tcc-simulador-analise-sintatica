@@ -25,3 +25,4 @@ tzdata
 uvicorn
 watchfiles
 websockets
+IPython
